@@ -1,4 +1,4 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET);
+const stripe = require('stripe')('sk_test_51LAi5wJWgMv1Rn5y5b3C77fz4DwCFeZTr78JpZtRHW9z3TuVu14b954Gr6wO8ZMWEJZfYOUqiI57P1H4b2kVgTWB00Api47qk1');
 const factory = require('./handlerFactory');
 const Boom = require('../utils/apiError');
 const asyncHandler = require('express-async-handler');
