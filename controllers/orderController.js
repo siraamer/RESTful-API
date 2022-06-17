@@ -6,7 +6,7 @@ const Order = require('../models/orderModel');
 const Cart = require('../models/cartModel');
 const Product = require('../models/productModel');
 const User = require('../models/userModel');
-const stripe = require('stripe');
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 // @desc  Create Cash Order
 // @route POST api/v1/order/cartId
