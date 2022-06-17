@@ -1,6 +1,6 @@
 const stripe = require('stripe')('sk_test_51LAi5wJWgMv1Rn5y5b3C77fz4DwCFeZTr78JpZtRHW9z3TuVu14b954Gr6wO8ZMWEJZfYOUqiI57P1H4b2kVgTWB00Api47qk1');
 const asyncHandler = require('express-async-handler');
-const factory = require('./handlersFactory');
+const factory = require('./handlerFactory');
 const ApiError = require('../utils/apiError');
 
 const User = require('../models/userModel');
