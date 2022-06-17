@@ -1,45 +1,38 @@
-const stripe = require('stripe')('sk_test_51LAi5wJWgMv1Rn5y5b3C77fz4DwCFeZTr78JpZtRHW9z3TuVu14b954Gr6wO8ZMWEJZfYOUqiI57P1H4b2kVgTWB00Api47qk1');
-const asyncHandler = require('express-async-handler');
+// const stripe = require('stripe')(process.env.STRIPE_SECRET);
 const factory = require('./handlerFactory');
-const ApiError = require('../utils/apiError');
-
-const User = require('../models/userModel');
-const Product = require('../models/productModel');
-const Cart = require('../models/cartModel');
+const Boom = require('../utils/apiError');
+const asyncHandler = require('express-async-handler');
 const Order = require('../models/orderModel');
+const Cart = require('../models/cartModel');
+const Product = require('../models/productModel');
+const User = require('../models/userModel');
+const stripe = require('stripe');
 
-// @desc    create cash order
-// @route   POST /api/v1/orders/cartId
-// @access  Protected/User
+// @desc  Create Cash Order
+// @route POST api/v1/order/cartId
+// @access Protected/User
 exports.createCashOrder = asyncHandler(async (req, res, next) => {
-  // app settings
+  //! App Settings
   const taxPrice = 0;
   const shippingPrice = 0;
-
-  // 1) Get cart depend on cartId
+  //! 1) Get Cart Depend On CartId.
   const cart = await Cart.findById(req.params.cartId);
   if (!cart) {
-    return next(
-      new ApiError(`There is no such cart with id ${req.params.cartId}`, 404)
-    );
+    return next(new Boom(`There is no cart for User`, 404));
   }
-
-  // 2) Get order price depend on cart price "Check if coupon apply"
+  //! 2) Get Order Price Depend On Cart Price 'Check If Coupon Applied'.
   const cartPrice = cart.totalPriceAfterDiscount
     ? cart.totalPriceAfterDiscount
     : cart.totalCartPrice;
-
   const totalOrderPrice = cartPrice + taxPrice + shippingPrice;
-
-  // 3) Create order with default paymentMethodType cash
+  //! 3) Create Order With Default Payment Method Type Cash.
   const order = await Order.create({
     user: req.user._id,
     cartItems: cart.cartItems,
     shippingAddress: req.body.shippingAddress,
     totalOrderPrice,
   });
-
-  // 4) After creating order, decrement product quantity, increment product sold
+  //! 4) After Creating Order, Decrement Product Quantity, Increment Product Sold.
   if (order) {
     const bulkOption = cart.cartItems.map((item) => ({
       updateOne: {
@@ -48,98 +41,82 @@ exports.createCashOrder = asyncHandler(async (req, res, next) => {
       },
     }));
     await Product.bulkWrite(bulkOption, {});
-
-    // 5) Clear cart depend on cartId
+    //! 5) Clear Cart Depend On CartId.
     await Cart.findByIdAndDelete(req.params.cartId);
   }
-
-  res.status(201).json({ status: 'success', data: order });
+  res.status(201).json({ status: `Successfully`, data: order });
 });
 
 exports.filterOrderForLoggedUser = asyncHandler(async (req, res, next) => {
-  if (req.user.role === 'user') req.filterObj = { user: req.user._id };
+  if (req.user.role === 'user') req.filterObject = { user: req.user._id };
   next();
 });
-// @desc    Get all orders
-// @route   POST /api/v1/orders
-// @access  Protected/User-Admin-Manager
-exports.findAllOrders = factory.getAll(Order);
+// @desc  Get All Orders
+// @route Get api/v1/orders
+// @access Protected/User-admin-manager
+exports.getAllOrders = factory.getAll(Order);
 
-// @desc    Get all orders
-// @route   POST /api/v1/orders
-// @access  Protected/User-Admin-Manager
-exports.findSpecificOrder = factory.getOne(Order);
+// @desc  Get Specific Order
+// @route Get api/v1/orders/orderId
+// @access Protected/User-admin-manager
+exports.getSpecificOrder = factory.getOne(Order);
 
-// @desc    Update order paid status to paid
-// @route   PUT /api/v1/orders/:id/pay
-// @access  Protected/Admin-Manager
+// @desc  Update Order Paid Status
+// @route PUT api/v1/orders/:id/pay
+// @access Protected/admin-manager
+
 exports.updateOrderToPaid = asyncHandler(async (req, res, next) => {
   const order = await Order.findById(req.params.id);
   if (!order) {
-    return next(
-      new ApiError(
-        `There is no such a order with this id:${req.params.id}`,
-        404
-      )
-    );
+    return next(new Boom(`There is no Order With This ID`, 404));
   }
-
-  // update order to paid
+  //! Update Order To Paid
   order.isPaid = true;
   order.paidAt = Date.now();
 
-  const updatedOrder = await order.save();
+  const updateOrder = await order.save();
 
-  res.status(200).json({ status: 'success', data: updatedOrder });
+  res.status(200).json({ status: 'Successfully', data: updateOrder });
 });
 
-// @desc    Update order delivered status
-// @route   PUT /api/v1/orders/:id/deliver
-// @access  Protected/Admin-Manager
+// @desc  Update Order Delivered Status
+// @route PUT api/v1/orders/:id/Deliver
+// @access Protected/admin-manager
+
 exports.updateOrderToDelivered = asyncHandler(async (req, res, next) => {
   const order = await Order.findById(req.params.id);
   if (!order) {
-    return next(
-      new ApiError(
-        `There is no such a order with this id:${req.params.id}`,
-        404
-      )
-    );
+    return next(new Boom(`There is no Order With This ID`, 404));
   }
-
-  // update order to paid
+  //! Update Order To Delivered
   order.isDelivered = true;
   order.deliveredAt = Date.now();
 
-  const updatedOrder = await order.save();
+  const updateOrder = await order.save();
 
-  res.status(200).json({ status: 'success', data: updatedOrder });
+  res.status(200).json({ status: 'Successfully', data: updateOrder });
 });
 
-// @desc    Get checkout session from stripe and send it as response
-// @route   GET /api/v1/orders/checkout-session/cartId
-// @access  Protected/User
+// @desc  Get Checkout Session from Stripe And Send It As A Response
+// @route Get api/v1/orders/checkout-session/:cartId
+// @access Protected/user
 exports.checkoutSession = asyncHandler(async (req, res, next) => {
-  // app settings
+  //! App Settings
   const taxPrice = 0;
   const shippingPrice = 0;
-
-  // 1) Get cart depend on cartId
+  //! 1) Get Cart Depend On CartId.
   const cart = await Cart.findById(req.params.cartId);
   if (!cart) {
-    return next(
-      new ApiError(`There is no such cart with id ${req.params.cartId}`, 404)
-    );
+    return next(new Boom(`There is no cart for User`, 404));
   }
-
-  // 2) Get order price depend on cart price "Check if coupon apply"
+  //! 2) Get Order Price Depend On Cart Price 'Check If Coupon Applied'.
   const cartPrice = cart.totalPriceAfterDiscount
     ? cart.totalPriceAfterDiscount
     : cart.totalCartPrice;
-
   const totalOrderPrice = cartPrice + taxPrice + shippingPrice;
 
-  // 3) Create stripe checkout session
+  //! 3) Create Stripe Checkout Session
+
   const session = await stripe.checkout.sessions.create({
     line_items: [
       {
@@ -157,8 +134,8 @@ exports.checkoutSession = asyncHandler(async (req, res, next) => {
     metadata: req.body.shippingAddress,
   });
 
-  // 4) send session to response
-  res.status(200).json({ status: 'success', session });
+  //! 4) Send Session To Response
+  res.status(200).json({ status: 'Successfully', data: session });
 });
 
 const createCardOrder = async (session) => {
