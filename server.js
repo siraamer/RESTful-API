@@ -3,7 +3,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
 const cors = require('cors');
-// const compression = require('compression');
+const compression = require('compression');
 const Boom = require('./utils/apiError');
 const globalError = require('./middleware/errorMiddleware');
 const {webhookCheckout} = require('./controllers/orderController');
@@ -24,7 +24,7 @@ app.use(cors());
 app.options('*', cors());
 
 // Compress All Response
-// app.use(compression());
+app.use(compression());
 
 // checkout webhook
 app.post(
