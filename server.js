@@ -6,7 +6,7 @@ const cors = require('cors');
 const compression = require('compression');
 const Boom = require('./utils/apiError');
 const globalError = require('./middleware/errorMiddleware');
-const webhookCheckout = require('./controllers/orderController');
+const {webhookCheckout} = require('./controllers/orderController');
 const dbConnection = require('./database');
 
 dotenv.config({ path: 'config.env' });
